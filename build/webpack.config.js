@@ -6,18 +6,23 @@ const {
 //拆分css
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 //拆分多个css
-const ExtractTextWebpackPlugin = require('extract-text-webpack-plugin')
-let indexLess = new ExtractTextWebpackPlugin('index.less');
-let indexCss = new ExtractTextWebpackPlugin('index.css');
+// const ExtractTextWebpackPlugin = require('extract-text-webpack-plugin')
+// let indexLess = new ExtractTextWebpackPlugin('index.less');
+// let indexCss = new ExtractTextWebpackPlugin('index.css');
 //解析vue文件
 const vueLoaderPlugin = require('vue-loader/lib/plugin')
 //配置webpack-dev-server进行热更新
 const Webpack = require('webpack')
+
+const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+
+const devMode = process.argv.indexOf('--mode=production') === -1;
 module.exports = {
   mode: 'development', // 开发模式
   entry: {
     main: path.resolve(__dirname, '../src/main.js'),
-    header: path.resolve(__dirname, '../src/header.js'),
+    // header: path.resolve(__dirname, '../src/header.js'),
+    // index: path.resolve(__dirname, '../src/index.js'),
     // ["@babel/polyfill",path.resolve(__dirname,'../src/index.js')] //通过借助babel-polyfill转换ES6/7/8的新api
   }, // 入口文件 path.resolve在当前目录执行cd操作，从左到右执行，返回最后的当前目录
   output: {
@@ -44,8 +49,8 @@ module.exports = {
       chunkFilename: "[id].css",
     }),
     //拆分多个css
-    indexLess,
-    indexCss,
+    // indexLess,
+    // indexCss,
     //解析vue文件
     new vueLoaderPlugin(),
    //配置webpack-dev-server进行热更新
@@ -82,18 +87,18 @@ module.exports = {
       /*  
       拆分多个CSS
        */
-      {
-        test: /\.css$/,
-        use: indexCss.extract({
-          use: ['css-loader']
-        })
-      },
-      {
-        test: /\.less$/,
-        use: indexLess.extract({
-          use: ['css-loader', 'less-loader']
-        })
-      },
+      // {
+      //   test: /\.css$/,
+      //   use: indexCss.extract({
+      //     use: ['css-loader']
+      //   })
+      // },
+      // {
+      //   test: /\.less$/,
+      //   use: indexLess.extract({
+      //     use: ['css-loader', 'less-loader']
+      //   })
+      // },
       /* 
       打包 图片、字体、媒体、等文件
        */
@@ -156,7 +161,29 @@ module.exports = {
       //解析vue文件
       {
         test: /\.vue$/,
-        use: ['vue-loader']
+        use: [{
+          loader:'vue-loader',
+          options:{
+            compilerOptions:{
+              preserveWhitespace:false
+            }
+          }
+        }]
+      },
+      {
+        test:/\.css$/,
+        use:[{
+          loader: devMode ? 'vue-style-loader' : MiniCssExtractPlugin.loader,
+          options:{
+            publicPath:"../dist/css/",
+            hmr:devMode
+          }
+        },'css-loader',{
+          loader:'postcss-loader',
+          options:{
+            plugins:[require('autoprefixer')]
+          }
+        }]
       },
     ]
   },
