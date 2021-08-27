@@ -17,6 +17,11 @@ const Webpack = require('webpack')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
 
 const devMode = process.argv.indexOf('--mode=production') === -1;
+
+//使用HappyPack开启多进程Loader转换
+const HappyPack = require('happypack')
+const os = require('os')
+const happyThreadPool = HappyPack({size:os.cpus().length})
 module.exports = {
   mode: 'development', // 开发模式
   entry: {
@@ -30,6 +35,22 @@ module.exports = {
     path: path.resolve(__dirname, '../dist') // 打包后的目录   __dirname：当前模块目录名
   },
   plugins: [
+    //使用HappyPack开启多进程Loader转换
+    new HappyPack({
+      id:'happyBable',//与loader对应的id标识
+      loaders:[
+        {
+          loader:'babel-loader',
+          options:{
+            presets:[
+              ['@babel/preset-env']
+            ],
+            cacheDirectory:true
+          }
+        }
+      ],
+      threadPool:happyThreadPool //共享进程池
+    }),
     // 多入口文件开发
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, '../public/index.html'),
@@ -57,7 +78,16 @@ module.exports = {
     new Webpack.HotModuleReplacementPlugin()
   ],
   module: {
-    rules: [{
+    rules: [
+      {
+        test:/\.js$/,
+        //把js文件处理交给id为happyBable的HappyPack的实例执行
+        use:[{
+          loader:'happypack/;loader?id=happyBable'
+        }],
+        exclude:/ndoe.modules/
+      },
+      {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'] // 从右向左解析原则
       },
@@ -188,11 +218,13 @@ module.exports = {
     ]
   },
   resolve: {
+    //当我们代码中出现 import 'vue'时， webpack会采用向上递归搜索的方式去node_modules 目录下找。
+    // 为了减少搜索范围我们可以直接告诉webpack去哪个路径下查找。也就是别名(alias)的配置。
     alias: {
       'vue$': 'vue/dist/vue.runtime.esm.js',
       ' @': path.resolve(__dirname, '../src')
     },
-    extensions: ['*', '.js', '.json', '.vue']
+    extensions: ['*', '.js', '.json', '.vue'] //webpack会根据extensions定义的后缀查找文件(频率较高的文件类型优先写在前面)
   },
   devServer:{
     port:3000,
